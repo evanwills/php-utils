@@ -25,7 +25,7 @@
  *
  * @category Deployto
  * @package  Deployto
- * @author   Evan Wills <evan.wills@acu.edu.au>
+ * @author   Evan Wills <evan.i.wills@gmail.com>
  * @license  MIT https://opensource.org/licenses/MIT
  * @link     https://github.com/evanwills/useful-bash-scripts
  */

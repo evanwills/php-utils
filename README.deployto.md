@@ -245,6 +245,6 @@ running  `deployto `*`[target]`*` force`
 
 ---
 
-Author:  Evan Wills <evan.wills@acu.edu.au><br />
+Author:  Evan Wills <evan.i.wills@gmail.com><br />
 Created: 2021-09-23 15:08 <br />
 Updated: 2022-04-29 23:38

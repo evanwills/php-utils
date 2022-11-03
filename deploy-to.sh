@@ -39,7 +39,7 @@
 #       by passing "force" as the only argument, or the second to
 #       this script
 #
-# Author:  Evan Wills <evan.wills@acu.edu.au>
+# Author:  Evan Wills <evan.i.wills@gmail.com>
 # Created: 2021-09-23 15:08
 # Updated: 2021-10-13 23:31
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

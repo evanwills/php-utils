@@ -10,7 +10,7 @@
  *
  * @category EnancedPDO
  * @package  EnancedPDO
- * @author   Evan Wills <evan.wills@acu.edu.au>
+ * @author   Evan Wills <evan.i.wills@gmail.com>
  * @license  ACU <https://www.acu.edu.au>
  * @link     https://gitlab.acu.edu.au/php/php-helper-utilities
  */
