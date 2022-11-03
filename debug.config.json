@@ -1,0 +1,12 @@
+{
+  "status": "true",
+  "format": "auto",
+  "mode": "echo",
+  "show_file": true,
+  "show_date": false,
+  "show_time": false,
+  "full_path": false,
+  "log_file": "",
+  "meta_max_length": 10,
+  "max_max_times": 13
+}
