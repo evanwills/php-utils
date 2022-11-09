@@ -320,8 +320,18 @@ if (!function_exists('debug')) {
                     break;
 
                 case 'object':
+                    $var_value = preg_replace(
+                        '/^Array/i',
+                        'Object',
+                        print_r(
+                            get_object_vars($var_value),
+                            true
+                        )
+                    );
+                    $var_value = Debug__sepcialChars($var_value);
+                    break;
                 case 'resource':
-                    $var_value = $var_type;
+                    $var_value = '[resource:'.get_resource_type($var_value).']';
                     break;
                 };
 

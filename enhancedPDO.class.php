@@ -11,8 +11,8 @@
  * @category EnancedPDO
  * @package  EnancedPDO
  * @author   Evan Wills <evan.i.wills@gmail.com>
- * @license  ACU <https://www.acu.edu.au>
- * @link     https://gitlab.acu.edu.au/php/php-helper-utilities
+ * @license  GPL2 <https://www.gnu.org/licenses/old-licenses/gpl-2.0.en.html>
+ * @link     https://github.com/evanwills/php-utils
  */
 
 if (!function_exists('debug')) { function debug() {} } // phpcs:ignore
@@ -96,6 +96,8 @@ class EnhancedPDO
         } catch (Exception $e) {
             throw new Exception($e->getMessage());
         }
+
+        $this->_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
         if (preg_match('/;dbname=(.*?)(?=;|$)/i', $dsn, $matches)) {
             $this->_dbName = $matches[1];
@@ -661,7 +663,7 @@ class EnhancedPDO
      *
      * @param string               $sql   SQL statement string to be
      *                                    prepared
-     * @param string|false         $str   String value to be bound in
+     * @param string               $str   String value to be bound in
      *                                    (If Str is false bind step
      *                                    is skipped)
      * @param string               $param Parameter name to bind to
@@ -675,7 +677,7 @@ class EnhancedPDO
      * @throws Exception if there is an error with the query
      */
     public function prepBindExecStr(
-        string $sql, $str = false, string $param = 'STR', $db = null
+        string $sql, string $str, string $param = 'STR', $db = null
     ) : PDOStatement {
         if (NEW_RELIC) { newrelic_add_custom_tracer('EnhancedPDO::prepBindExecStr'); } // phpcs:ignore
 
