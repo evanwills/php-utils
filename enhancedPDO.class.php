@@ -38,6 +38,13 @@ class EnhancedPDO
     private $_db = null;
 
     /**
+     * Host name/IP address of server the database is on
+     *
+     * @var string
+     */
+    private $_dbHost = '';
+
+    /**
      * Name of the database the PDO object was instantiated with
      *
      * @var string
@@ -56,7 +63,7 @@ class EnhancedPDO
      * successfully executed
      *
      * > NOTE: Different DB engines may have different error/success
-     * >       codes. As I find them, I will add them here
+     * >       codes. As I find them, they'll be added here
      *
      * @var string[]
      */
@@ -99,6 +106,10 @@ class EnhancedPDO
 
         $this->_db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
+        if (preg_match('/;host=(.*?)(?=;|$)/i', $dsn, $matches)) {
+            $this->_dbHost = $matches[1];
+        }
+
         if (preg_match('/;dbname=(.*?)(?=;|$)/i', $dsn, $matches)) {
             $this->_dbName = $matches[1];
         }
@@ -118,6 +129,18 @@ class EnhancedPDO
         if (NEW_RELIC) { newrelic_add_custom_tracer('EnhancedPDO::getDB'); } // phpcs:ignore
 
         return $this->_db;
+    }
+
+    /**
+     * Get the host name/IP address of server the database is on
+     *
+     * @return string
+     */
+    public function getDbHost() : string
+    {
+        if (NEW_RELIC) { newrelic_add_custom_tracer('EnhancedPDO::getDbHost'); } // phpcs:ignore
+
+        return $this->_dbHost;
     }
 
     /**
@@ -221,7 +244,8 @@ class EnhancedPDO
         try {
             return $this->prepare($sql, $db);
         } catch(Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prep'));
+            // throw new Exception($this->_rethrow($e, 'prep'));
+            throw $e;
         }
     }
 
@@ -232,11 +256,15 @@ class EnhancedPDO
      *
      * @param PDOStatement $stmt PDO Statement to be executed and
      *                           checked
+     * @param integer      $up   Debug level (Makes the debug
+     *                           metadata show where this this
+     *                           method was called from rather
+     *                           than this method itself)
      *
      * @return PDOStatement
      * @throws Exception if there is an error with the query
      */
-    public function execute(PDOStatement $stmt) : PDOStatement
+    public function execute(PDOStatement $stmt, int $up = 1) : PDOStatement
     {
         if (NEW_RELIC) { newrelic_add_custom_tracer('EnhancedPDO::execute'); } // phpcs:ignore
 
@@ -245,7 +273,7 @@ class EnhancedPDO
         } catch(Exception $e) {
             // Capture the contents of PDOStatement::debugDumpParams()
             // so it can be used when throwing an exception;
-            $bits = $this->debug($stmt);
+            $bits = $this->debug($stmt, true, 1);
 
             throw new Exception("{$bits['msg']}\n\n{$bits['sent']}");
         }
@@ -253,9 +281,8 @@ class EnhancedPDO
         if (!in_array($stmt->errorCode(), $this->_successCodes)) {
             // Capture the contents of PDOStatement::debugDumpParams()
             // so it can be used when throwing an exception;
-            $bits = $this->debug($stmt);
+            $bits = $this->debug($stmt, true, $up);
             debug($bits);
-            // $sent =
 
             throw new Exception($bits['msg']."\n\n".$bits['sent']."\n");
         }
@@ -272,18 +299,23 @@ class EnhancedPDO
      *
      * @param PDOStatement $stmt PDO Statement to be executed and
      *                           checked
+     * @param integer      $up   Debug level (Makes the debug
+     *                           metadata show where this this
+     *                           method was called from rather
+     *                           than this method itself)
      *
      * @return PDOStatement
      * @throws Exception if there is an error with the query
      */
-    public function exec(PDOStatement $stmt) : PDOStatement
+    public function exec(PDOStatement $stmt, int $up = 1) : PDOStatement
     {
         if (NEW_RELIC) { newrelic_add_custom_tracer('EnhancedPDO::exec'); } // phpcs:ignore
 
         try {
-            return $this->execute($stmt);
+            return $this->execute($stmt, $up + 1);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'exec'));
+            // throw new Exception($this->_rethrow($e, 'exec'));
+            throw $e;
         }
     }
 
@@ -294,6 +326,9 @@ class EnhancedPDO
      * @param PDOStatement $stmt  Statement to be debuged
      * @param boolean      $debug Whether or not to pass return value
      *                            into debug() before returning it.
+     * @param integer      $up    How many levels up the stack should
+     *                            the debug message appear to come
+     *                            from
      *
      * @return array with 5 keys:
      *               `raw`    - Raw SQL passed to prepare();
@@ -304,12 +339,13 @@ class EnhancedPDO
      *               `params` - List of all the parameters the query
      *                          expects;
      *               `code`   - SQL Error code (if query has been
-     *                          executed);
+     *                          executed)
      *               `msg`    - SQL Error message (if query has been
      *                          executed)
      */
-    public function debug(PDOStatement $stmt, bool $debug = false) : array
-    {
+    public function debug(
+        PDOStatement $stmt, bool $debug = false, int $up = 1
+    ) : array {
         if (NEW_RELIC) { newrelic_add_custom_tracer('EnhancedPDO::debug'); } // phpcs:ignore
 
         // Capture the contents of PDOStatement::debugDumpParams()
@@ -322,13 +358,13 @@ class EnhancedPDO
             'raw' => '',
             'sent' => '',
             'params' => [],
-            'code' => '00000',
+            'code' => $stmt->errorCode(),
             'msg' => ''
         ];
 
         $regex1 = '/^.*?SQL:(?: *\[[0-9]+\])?(?<raw>.*?)[\r\n]+'.
                 '(?:Sent SQL:(?: *\[[0-9]+\])(?<sent>.*?)[\r\n]+)?'.
-                             'Params: *[0-9]+(?<params>.*)$/s';
+                             'Params: *[0-9]+(?<params>.*)$/is';
 
         $regex2 = '/Key: Name: \[[0-9]+\] (?<name1>:[a-z0-9_]+)'.
                               '.*?paramno=(?<num>-?[0-9]+).*?'.
@@ -355,20 +391,22 @@ class EnhancedPDO
             }
         }
 
-        if ($output['sent'] !== '') {
+        if (!in_array($output['code'], $this->_successCodes)) {
             // Query has been set to server, get whatever error info
             // is available and update the output
             $tmp = $stmt->errorInfo();
             $output['code'] = $tmp[0];
             $output['msg'] = $tmp[2];
-        } elseif ($output['raw'] === '') {
+        }
+
+        if ($output['raw'] === '') {
             // Looks like query may not have been sent to the server.
             // Just get the original query string
             $output['raw'] = $stmt->queryString;
         }
 
         if ($debug === true) {
-            debug($output);
+            debug($output, 'meta-level='.$up);
         }
 
         return $output;
@@ -404,7 +442,8 @@ class EnhancedPDO
         try {
             $stmt = $this->prepare($sql, $db);
         } catch(Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBind'));
+            // throw new Exception($this->_rethrow($e, 'prepBind'));
+            throw $e;
         }
 
         $stmt->bindParam(":$param", $id, PDO::PARAM_INT);
@@ -440,7 +479,8 @@ class EnhancedPDO
         try {
             $stmt = $this->prepare($sql, $db);
         } catch(Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindStr'));
+            // throw new Exception($this->_rethrow($e, 'prepBindStr'));
+            throw $e;
         }
 
         $stmt->bindParam(":$param", $str, PDO::PARAM_STR);
@@ -474,7 +514,7 @@ class EnhancedPDO
     ) : PDOStatement {
         if (NEW_RELIC) { newrelic_add_custom_tracer('prepBindIn'); } // phpcs:ignore
 
-        if (!is_string($sql) || $sql !== '') {
+        if (!is_string($sql) || $sql === '') {
             throw new Exception(
                 'EnhancedPDO::prepBindIn() expects first parameter '.
                 '$sql to be a non-empty string'
@@ -489,11 +529,7 @@ class EnhancedPDO
         }
 
         $stmt = $this->prep(
-            preg_replace(
-                '/(IN\s*\(\s*)[[PARAMS]](?=\s*\))/i',
-                '\1'.$params,
-                $sql
-            ),
+            str_replace('[[PARAMS]]', $params, $sql),
             $db
         );
 
@@ -534,13 +570,15 @@ class EnhancedPDO
         try {
             $stmt = $this->prepBindIn($sql, $ins, $type, $db);
         } catch(Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            // throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            throw $e;
         }
 
         try {
-            $stmt = $this->execute($stmt);
+            $stmt = $this->execute($stmt, 2);
         } catch(Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            // throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            throw $e;
         }
 
         return $stmt;
@@ -577,9 +615,10 @@ class EnhancedPDO
         }
 
         try {
-            return $this->execute($stmt);
+            return $this->execute($stmt, 2);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'bindExec'));
+            // throw new Exception($this->_rethrow($e, 'bindExec'));
+            throw $e;
         }
     }
 
@@ -606,9 +645,10 @@ class EnhancedPDO
         $stmt->bindParam(":$param", $str, PDO::PARAM_STR);
 
         try {
-            return $this->execute($stmt);
+            return $this->execute($stmt, 2);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'bindExecStr'));
+            // throw new Exception($this->_rethrow($e, 'bindExecStr'));
+            throw $e;
         }
     }
 
@@ -643,13 +683,19 @@ class EnhancedPDO
         try {
             $stmt = $this->prepare($sql, $db);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            // throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            throw $e;
+        }
+
+        if ($id !== null) {
+            $stmt->bindParam(':'.$param, $id, PDO::PARAM_INT);
         }
 
         try {
-            return $this->bindExec($stmt, $id, $param);
+            return $this->execute($stmt, 2);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            // throw new Exception($this->_rethrow($e, 'prepBindExec'));
+            throw $e;
         }
     }
 
@@ -684,14 +730,99 @@ class EnhancedPDO
         try {
             $stmt = $this->prepare($sql, $db);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindExecStr'));
+            // throw new Exception($this->_rethrow($e, 'prepBindExecStr'));
+            throw $e;
         }
 
+        $stmt->bindParam(':'.$param, $str, PDO::PARAM_STR);
+
         try {
-                return $this->bindExecStr($stmt, $str, $param);
+            return $this->execute($stmt, 2);
         } catch (Exception $e) {
-            throw new Exception($this->_rethrow($e, 'prepBindExecStr'));
+            // throw new Exception($this->_rethrow($e, 'prepBindExecStr'));
+            throw $e;
         }
+    }
+
+    /**
+     * Bind string value to parameter in PDO statement
+     *
+     * @param PDOStatement $stmt  PDO Statement to which parameters
+     *                            are bound and executed
+     * @param string       $param Parameter name to bind to
+     * @param string       $value String value to be bound in
+     *
+     * @return PDOStatement
+     */
+    public function bindStr(
+        PDOStatement $stmt, string $param, string $value
+    ) : PDOStatement {
+        $stmt->bindParam(':'.$param, $value, PDO::PARAM_STR);
+        return $stmt;
+    }
+
+    /**
+     * Bind integer value to parameter in PDO statement
+     *
+     * This is a useful shortcut when the value you want to bind in
+     * is the return value of a function or method. Using this saves
+     * you having to create a separate variable before you bind in
+     * the value.
+     *
+     * @param PDOStatement $stmt  PDO Statement to which parameters
+     *                            are bound and executed
+     * @param string       $param Parameter name to bind to
+     * @param integer      $value String value to be bound in
+     *
+     * @return PDOStatement
+     */
+    public function bindInt(
+        PDOStatement $stmt, string $param, int $value
+    ) : PDOStatement {
+        $stmt->bindParam(':'.$param, $value, PDO::PARAM_INT);
+        return $stmt;
+    }
+
+    /**
+     * Bind integer value to parameter in PDO statement
+     *
+     * This is a useful shortcut when the value you want to bind in
+     * is the return value of a function or method. Using this saves
+     * you having to create a separate variable before you bind in
+     * the value.
+     *
+     * @param PDOStatement $stmt  PDO Statement to which parameters
+     *                            are bound and executed
+     * @param string       $param Parameter name to bind to
+     * @param boolean      $value String value to be bound in
+     *
+     * @return PDOStatement
+     */
+    public function bindBool(
+        PDOStatement $stmt, string $param, bool $value
+    ) : PDOStatement {
+        $stmt->bindParam(':'.$param, $value, PDO::PARAM_BOOL);
+        return $stmt;
+    }
+
+    /**
+     * Bind integer value to parameter in PDO statement
+     *
+     * This is a useful shortcut when the value you want to bind in
+     * is the return value of a function or method. Using this saves
+     * you having to create a separate variable before you bind in
+     * the value.
+     *
+     * @param PDOStatement $stmt  PDO Statement to which parameters
+     *                            are bound and executed
+     * @param string       $param Parameter name to bind to
+     *
+     * @return PDOStatement
+     */
+    public function bindNull(PDOStatement $stmt, string $param) : PDOStatement
+    {
+        $stmt->bindParam(':'.$param, null, PDO::PARAM_NULL);
+        return $stmt;
     }
 
     /**
