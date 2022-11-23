@@ -273,16 +273,19 @@ class EnhancedPDO
         } catch(Exception $e) {
             // Capture the contents of PDOStatement::debugDumpParams()
             // so it can be used when throwing an exception;
-            $bits = $this->debug($stmt, true, 1);
+            $bits = $this->debug($stmt, true, $up);
 
-            throw new Exception("{$bits['msg']}\n\n{$bits['sent']}");
+            if ($bits['msg'] === '') {
+                throw $e;
+            } else {
+                throw new Exception("{$bits['msg']}\n\n{$bits['sent']}");
+ 	        }
         }
 
         if (!in_array($stmt->errorCode(), $this->_successCodes)) {
             // Capture the contents of PDOStatement::debugDumpParams()
             // so it can be used when throwing an exception;
             $bits = $this->debug($stmt, true, $up);
-            debug($bits);
 
             throw new Exception($bits['msg']."\n\n".$bits['sent']."\n");
         }
@@ -404,6 +407,8 @@ class EnhancedPDO
             // Just get the original query string
             $output['raw'] = $stmt->queryString;
         }
+
+        $up += 1;
 
         if ($debug === true) {
             debug($output, 'meta-level='.$up);

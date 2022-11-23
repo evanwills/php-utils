@@ -57,13 +57,23 @@ if (!function_exists('newrelic_add_custom_tracer')) {
 }
 
 /**
- * Checks an if an array has the specified key, if not returns
- * the default value supplied. If so, it then passes the matched
- * value through an additional validation or sanitisation
- * function then returns the result of that.
+ * Check if an array has the specified key and return validated value
+ * or default value if desired field was missing or invalid.
+ *
+ * This primarily intended for validating/sanitising user supplied
+ * values from `$_POST`, `$_GET` `$_SESSION`, `$_COOKIES` (etc.)
+ * before they are
+ * processed by application code.
+ *
+ * The call signature is intended to feel like an enhanced version of
+ * PHP's built in `array_key_exists()` fuction.
+ *
+ * > __Note:__ By passing in the array, instead of depending on
+ * >           $_POST, $_GET $_SESSION, $_COOKIES etc, this function
+ * >           is much easier to test and use.
  *
  * @param string   $key        Array key to be checked
- * @param string[] $inputArray Array (almost always $_POST) whose
+ * @param array  $inputArray Array (almost always $_POST) whose
  *                             key is to be checked
  * @param mixed    $default    Default value to be returned if key
  *                             is not present or invalid
@@ -71,35 +81,82 @@ if (!function_exists('newrelic_add_custom_tracer')) {
  *                             validation/sanitisation should be
  *                             applied to the matched value
  *                             Mode options are:
- *                             * `anyphone` Any Australian or international
- *                             phone number
+ *                           * `anyphone`   Any Australian or
+ *                           international phone number (see:
+ *                           [sanitiseAnyPhone()](#function_sanitiseAnyPhone))
+ *                             * `aupostcode` Australian post code (see:
+ *                             [validateAUPostCode()](#function_validateAUPostCode))
  *                             * `bool`     Used for checkboxes
- *                             (expected value: 1 or 'true' or 'yes' or 'on' or TRUE)
- *                             * `callable` Passes found value (& default)
- *                             to callback function and returns the result
- *                             * `checkbox` Returns TRUE if key exits
- *                             (value is ignored)
- *                             * `date`     Expected input is an ISO 8601
- *                             date formated string
- *                             (return value is an integer YYYYMMDD)
- *                             * `email`    Any valid email
- *                             * `html`     Make sure HTML doesn't have any nasties
- *                             * `int`      Make sure a value is an integer
- *                             * `landline` Australian land line
- *                             * `mobile`   Australian mobile phone number
- *                             * `name`     Make sure name only has alpha-numeric
- *                             characters, hyphens, apostropies and/or spaces
- *                             * `numeric`  Make sure value is either integer
- *                             or float
- *                             * `refid`    SecurePay refid value
- *                             * `osphone`  Any international phone number
- *                             * `select`   Make sure the user supplied value
- *                             is one of the options available
- *                             * `time`     ISO 8601 time formatted string
- *                             * `text`     title
- * @param mixed    $modifiers  modifiers to pass on to validation function
+ *                             (expected value: 1 or 'true' or 'yes'
+ *                             or 'on' or TRUE)
+ *                           * `callable`   Passes found value
+ *                           (& default)to callback function and
+ *                           returns the result
+ *                           * `checkbox`   Returns TRUE if key
+ *                           exits (value is ignored)
+ *                           * `date`       Expected input is an
+ *                           ISO 8601 date formated string
+ *                           (return value is an integer YYYY-MM-DD) (see:
+ *                           [validateIsoDate()](#function_validateIsoDate))
+ *                           * `datetime`   Expected input is an
+ *                           ISO 8601 datetime formated string
+ *                           (return value is an integer
+ *                           "YYYY-MM-DD HH:MM:SS") (see:
+ *                           [validateIsoDateTime()](#function_validateIsoDateTime))
+ *                           * `email`      Any valid email (see:
+ *                           [validateEmail()](#function_validateEmail))
+ *                           * `fixedphone` Australian fixed line
+ *                           phone number (with area code) (see:
+ *                           [sanitiseLandline()](#function_sanitiseLandline))
+ *                           * `html`       Make sure HTML doesn't
+ *                           have any nasties
+ *                           * `int`        Make sure a value is an
+ *                           integer
+ *                           * `intphone`   Any international phone
+ *                           number (see
+ *                           [sanitiseOsPhone](#function_sanitiseOsPhone))
+ *                           * `landline`   (see
+ *                           [fixedphone](#function_sanitiseLandline))
+ *                           * `mobile`     Australian mobile phone
+ *                           number (see
+ *                           [sanitiseMobile](#function_sanitiseMobile))
+ *                           * `name`       Make sure name only has
+ *                           alpha-numeric characters, hyphens,
+ *                           apostropies, spaces and/or full stops (see
+ *                           [sanitiseName](#function_sanitiseName))
+ *                           * `number`    Make sure value is
+ *                           either integer or float (see
+ *                           [sanitiseNumeric](#function_sanitiseNumeric))
+ *                           * `numeric`    Make sure value is
+ *                           either integer or float (see
+ *                           [sanitiseNumeric](#function_sanitiseNumeric))
+ *                           * `osphone`    (see
+ *                           [`intphone`](#function_function_sanitiseOsPhone))
+ *                           * `select`     Make sure the user
+ *                           supplied value is one of the options
+ *                           available (see
+ *                           [validateSelected](#function_validateSelected))
+ *                           * `text`       Any text (with
+ *                           potentially bad content removed) (see
+ *                           [sanitiseText](#function_sanitiseText))
+ *                           * `time`       ISO 8601 time formatted
+ *                           string ("HH:MM:SS") (see
+ *                           [validateIsoTime](#function_validateIsoTime))
+ *                           * `title`      String that can be used
+ *                           as the Title of something (see
+ *                           [sanitiseTitle](#function_sanitiseTitle))
+ *                           * `url`        Any URL (see
+ *                           [validateURL](#function_validateURL))
+ *                           * `year`       Calendar year within (see
+ *                           [validateYear](#function_validateYear))
+ *                           100 years of the current day
+ * @param mixed  $modifiers  modifiers to pass on to validation/sanitisation
+ *                           function (check the function link for
+ *                           the validation/sanitisation mode you're
+ *                           using)
  *
- * @return string|false If the value was found
+ * @return mixed Valid value matched by array key or default value
+ *               if key was not found or value was invalid
  */
 function getValidFromArray(
     $key,
@@ -146,21 +203,22 @@ function getValidFromArray(
         case 'email':
             return validateEmail($output, $_default);
         case 'fixedphone':
+        case 'landline':
             return sanitiseLandline($output, $_default);
         case 'html':
             return sanitiseHTML($output);
         case 'int':
             return sanitiseInt($output, $default, $modifiers);
+        case 'intphone':
+        case 'osphone':
+            return sanitiseOsPhone($output, $_default);
         case 'mobile':
             return sanitiseMobile($output, $_default);
         case 'name':
             return sanitiseName($output, $modifiers);
+        case 'number':
         case 'numeric':
             return sanitiseNumeric($output, $default, $modifiers);
-        case 'refid':
-            return validateRefID($output, $default);
-        case 'osphone':
-            return sanitiseOsPhone($output, $_default);
         case 'select':
             return validateSelected($output, $modifiers, $_default);
         case 'text':
@@ -179,6 +237,42 @@ function getValidFromArray(
         }
     }
     return $default;
+}
+
+/**
+ * Check whether a supplied array value (almost always $_POST) is an
+ * integer greater than or equal to zero and less than or equal to
+ * the value supplied in $max
+ *
+ * The primary purpose of this function is to see if a user supplied
+ * value can be used as a "primary" or "foreign" key value in
+ * database queries
+ *
+ * > __Note:__ This is just a sortcut for:
+ * > ```php
+ * > getValidFromArray($key, $inputArray, $default, 'int', ['min' => 0, 'max' => $max]);
+ * > ```
+ *
+ * @param string  $key        array key to be tested
+ * @param array   $inputArray array containing the key/value to
+ *                            be tested
+ * @param integer $default    default value to be used if value
+ *                            is invalid
+ * @param integer $max        The upper limit of the ID
+ *
+ * @return integer a valid unique to be used for that table
+ */
+function getMaxPosInt(
+    string $key,
+    array  $inputArray,
+    int    $default,
+    int    $max = 100000
+) : int {
+    if ( NEW_RELIC ) { newrelic_add_custom_tracer('getMaxPosInt'); } // phpcs:ignore
+
+    return getValidFromArray(
+        $key, $inputArray, $default, 'int', ['min' => 0, 'max' => $max]
+    );
 }
 
 // =======================================================
@@ -426,6 +520,7 @@ function sanitiseText($text, $_modifiers = false)
     $regex = '';
     $doDedupe = false;
     $ignore = 'i';
+    $replaceStr = ' ';
 
     if (is_array($_modifiers)) {
         foreach ($_modifiers as $key => $value) {
@@ -467,6 +562,10 @@ function sanitiseText($text, $_modifiers = false)
             $regex = $_modifiers['allowraw'];
         }
 
+        if (array_key_exists('replace', $_modifiers)) {
+            $replaceStr = $_modifiers['replace'];
+        }
+
         if (array_key_exists('dedupe', $_modifiers)
             && is_bool($_modifiers['dedupe'])
         ) {
@@ -482,7 +581,7 @@ function sanitiseText($text, $_modifiers = false)
     }
 
     $find = [$regex];
-    $replace = [' '];
+    $replace = [$replaceStr];
 
     if ($doDedupe === true) {
         $find[] = '/\s+/';
@@ -733,6 +832,8 @@ function sanitiseInt(string $number, int $_default = 0, $_modifiers = false) : i
  *                                * `min` - minimum allowable value
  *                                * `max` - maximum allowable value
  *                                * `precision` - number of decimal places
+ *                                * `limit` - if input is outside
+ *                                min/max, return appropriate min/max
  *
  *                                Other keys will be ignored
  *
@@ -779,7 +880,9 @@ function sanitiseNumeric(string $number, $_default = 0, $_modifiers = false)
                     );
                 }
                 if ($_num < $_modifiers['min']) {
-                    return $_default;
+                    return (array_key_exists('limit', $_modifiers))
+                        ? $_modifiers['min']
+                        : $_default;
                 }
             }
             if (array_key_exists('max', $_modifiers)) {
@@ -791,7 +894,9 @@ function sanitiseNumeric(string $number, $_default = 0, $_modifiers = false)
                     );
                 }
                 if ($_num > $_modifiers['max']) {
-                    return $_default;
+                    return (array_key_exists('limit', $_modifiers))
+                        ? $_modifiers['max']
+                        : $_default;
                 }
             }
 
@@ -884,15 +989,21 @@ function validateEmail($email, $_default = false)
     if ( NEW_RELIC ) { newrelic_add_custom_tracer('validateEmail'); } // phpcs:ignore
 
     $regex = '`^[\d\w\-_.\']+@[\d\w-]+(?:\.[\d\w-]+)*(?:\.[a-z]+){1,2}$`i';
-    $_tmp = explode('@', $email);
 
+    $_email = strtolower($email);
+    $_tmp = explode('@', $_email);
 
-    return (isset($_tmp[1])
-            // Don't accept email addresses with example in the domain
-            && substr_count(strtolower($_tmp[1]), 'example') === 0
-            && preg_match($regex, $email))
-        ? $email
-        : $_default;
+    return (!isset($_tmp[1])
+            // Don't accept email addresses with example anywhere
+            || substr_count($_email, 'example') > 0
+            // Don't accept emails from the "email.tst" domain
+            || substr_count($_tmp[1], 'email.tst') > 0
+            // Don't accept emails from domains with test in them
+            || substr_count($_tmp[1], 'test') > 0
+            // Do final regex validation
+            || !preg_match($regex, $email))
+        ? $_default
+        : $email;
 }
 
 /**
@@ -1093,30 +1204,6 @@ function validateIsoTime(string $time, $_default = false, $_modifier = false)
     } else {
         return $_default;
     }
-}
-
-/**
- * Checks whether a string is a valid SecurePay refid
- *
- * @param string       $refID    refid to be parsed
- * @param string|false $_default Default value to be returned
- *
- * @return string|false refid if it's valid, FALSE otherwise
- */
-function validateRefID($refID, $_default = false)
-{
-    if ( NEW_RELIC ) { newrelic_add_custom_tracer('validateRefID'); } // phpcs:ignore
-
-    if (!is_string($refID)) {
-        return $_default;
-    }
-
-    $regex = '/^[a-z0-9]+_[1-9][0-9]+$/i';
-    $refID = trim($refID);
-
-    return preg_match($regex, $refID)
-        ? $refID
-        : $_default;
 }
 
 /**
