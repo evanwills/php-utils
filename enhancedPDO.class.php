@@ -275,7 +275,7 @@ class EnhancedPDO
             // so it can be used when throwing an exception;
             $bits = $this->debug($stmt, true, $up);
 
-            if ($bits['msg'] === '') {
+            if (trim($bits['msg']) === '') {
                 throw $e;
             } else {
                 throw new Exception("{$bits['msg']}\n\n{$bits['sent']}");

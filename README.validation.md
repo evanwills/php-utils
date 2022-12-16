@@ -7,14 +7,23 @@ sophisticated validation of data coming from the user in `$_POST`,
 `$_GET` or `$_COOKIES`.
 
 ```php
-getValidFromArray(string $key, array $inputArray [, string|false|int|float|null $default [, string $mode [, mixed $modifier]]]) : mixed
+getValidFromArray(
+    string $key,
+    array $inputArray [,
+        string|false|int|float|null $default [,
+            string $mode [,
+                mixed $modifier
+            ]
+        ]
+    ]
+) : mixed
 ```
 
-As the name suggests this checks an array for a given key. Then if
+As the name suggests this checks an array for a given key. Then, if
 found, it validates the input as specified by `$mode`. If the input
 passes validation it is returned. If not, the default value supplied
-will be returned. It is essentially a shortcut for with extra
-validation/sanitisation on top.
+will be returned. It is essentially a shortcut for the following with
+extra validation/sanitisation on top.
 
 ```php
 $someVar = isset($arr['key']) && $arr['key'] !== '';

@@ -250,7 +250,10 @@ function getValidFromArray(
  *
  * > __Note:__ This is just a sortcut for:
  * > ```php
- * > getValidFromArray($key, $inputArray, $default, 'int', ['min' => 0, 'max' => $max]);
+ * > getValidFromArray(
+ * >     $key, $inputArray, $default, 'int',
+ * >    ['min' => 0, 'max' => $max]
+ * > );
  * > ```
  *
  * @param string  $key        array key to be tested
@@ -453,34 +456,12 @@ function sanitiseName($name, $_modifier = 64)
                         ' ',
                         '\1'
                     ),
-                    $name
+                    strip_tags($name)
                 )
             ),
             0, $_modifier
         )
     );
-}
-
-/**
- * Ensure that studentID only has uppercase alphabetical characters
- * and numbers and in no more than 24 characters long
- *
- * @param string $studentID value supplied by user
- *
- * @todo set up validation on input so output is FALSE if input
- *       is invalid or unreasonable.
- *
- * @return integer
- */
-function sanitiseStudentID($studentID)
-{
-    if ( NEW_RELIC ) { newrelic_add_custom_tracer('sanitiseStudentID'); } // phpcs:ignore
-
-    $output = preg_replace('`[^A-Z0-9]+`', '', strtoupper($studentID));
-
-    return (strlen($output) > 24)
-        ? substr($output, 0, 24)
-        : $output;
 }
 
 /**
@@ -594,7 +575,7 @@ function sanitiseText($text, $_modifiers = false)
     return trim(
         substr(
             trim(
-                preg_replace($find, $replace, $text)
+                preg_replace($find, $replace, strip_tags($text))
             ),
             0, $maxLen
         )
@@ -631,7 +612,7 @@ function sanitiseTitle(string $title, $_modifier = 128) : string
                         '/([&,.?:! \-_\'()])\1+/i'
                     ],
                     [' ', '', '\1'],
-                    $title
+                    strip_tags($title)
                 ),
             ),
             0,
