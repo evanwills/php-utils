@@ -10,8 +10,8 @@ sophisticated validation of data coming from the user in `$_POST`,
 getValidFromArray(
     string $key,
     array $inputArray [,
-        string|false|int|float|null $default [,
-            string $mode [,
+        string|boolean|int|float|null $default = false [,
+            string $mode = 'default' [,
                 mixed $modifier
             ]
         ]
@@ -46,9 +46,9 @@ $firstName = getValidFromArray('firstname', $_POST, '', 'name');
     * `text` - [Plain english text with limited punctuation](#text-type-string)
     * `name` - [Names of people, places or things](#name-type-string)
     * `title` - [Like *name* but for longer strings and more punctuation](#title-type-string)
-    * `html` - HTML with bad tags removed
   * [Special text validation](#special-text-validation)
     * `email` - Email address
+    * `html` - HTML with bad tags and attributes removed
     * `url` - Any url
   * [Phone number validation](#phone-number-validation)
     * `mobile` - [Australian mobile phone number](#australian-mobile-number)
@@ -69,7 +69,8 @@ $firstName = getValidFromArray('firstname', $_POST, '', 'name');
   * `select` - [response from a select or radio input](#select)
   * `callback` - [Passes found value through validation callback function](#callback)
 * `$modifier`: *[`mixed` - optional]* Some value that augments the
-  behavior of the modifier examples below for how modifiers can be
+  behavior of the validation mode.
+  Examples below for how modifiers can be
   used.<br />
   (See each mode for appropriate modifiers.)
 

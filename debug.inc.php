@@ -122,8 +122,7 @@ if (!function_exists('debug')) {
 
                 switch ($var_type) {
                 case 'string':
-                    switch(strtolower($var_value))
-                    {
+                    switch(strtolower($var_value)) {
                     case 'help':
                     case '?':
                         $b = $a+1;
@@ -315,7 +314,7 @@ if (!function_exists('debug')) {
                     if ($var_name == '') {
                         $var_name = '['.strtoupper($var_type).']: ';
                     } else {
-                        $var_value .= " ($var_type)";
+                        $var_value .= " [$var_type]";
                     }
                     break;
 
@@ -716,7 +715,25 @@ if (!function_exists('debug')) {
         Debug__define('DEBUG__MSG_META', $meta);
     }
 
-
+    define(
+        'DEBUG_HTML_TMPL',
+        "<!DOCTYPE html>\n".
+        "<html lang=\"en-au\">\n".
+        "\t<head>\n".
+        "\t\t<meta charset=\"utf-8\" />\n".
+        "\t\t<meta http-equiv=\"X-UA-Compatible\" content=\"IE=edge\" />\n".
+        "\t\t<meta name=\"viewport\" ".
+                  "content=\"user-scalable=yes, ".
+                            "initial-scale=1.0, ".
+                            "width=device-width, ".
+                            "height=device-height]\" />\n".
+        "\t\t<title>[[TITLE]]</title>\n".
+        "\t</head>\n".
+        "\t<body>\n".
+        "\t\t<h1>[[TITLE]]</h1>\n".
+        "\t\t</body>\n".
+        "</html>"
+    );
 
     /**
      * Set up the log file to accecpt debug log info.
@@ -762,22 +779,7 @@ if (!function_exists('debug')) {
                 switch (DEBUG__FORMAT) {
                 case 'htm':
                 case 'html':
-                    $content = '
-<!DOCTYPE html>
-<html lang="en-au">
-    <head>
-        <meta charset="utf-8" />
-		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta name="viewport"
-              content="user-scalable=yes, initial-scale=1.0,
-              width=device-width, height=device-height" />
-        <title>'.$heading.'</title>
-    </head>
-    <body>
-        <h1>'.$heading.'</h1>
-    </body>
-</html>
-';
+                    $content = str_replace('[[TITLE]]', $heading, DEBUG_HTML_TMPL);
                     break;
 
                 default:
@@ -835,7 +837,6 @@ if (!function_exists('debug')) {
             }
         }
     }
-
 
     /**
      * Defines debug config defaults based on values from debug.info file
@@ -965,7 +966,6 @@ if (!function_exists('debug')) {
         }
         return $config;
     }
-
 
     /**
      * Define how many times the debug() function gets called in script
@@ -1097,13 +1097,13 @@ if (!function_exists('debug')) {
         case 'comment':
         case 'log':
         case 'html':
+        case 'text':
             return $input;
 
         case 'htm':
         case 'xhtml':
             return 'html';
 
-        case 'text':
         case 'txt':
             return 'text';
 
@@ -1180,8 +1180,6 @@ if (!function_exists('debug')) {
 
     }
 
-
-
     define(
         'DEBUG__DIE_WITH_INFO__NO_VAR',
         '{[ NO_INPUT_SUPPLIED - '.microtime().' ]}'
@@ -1231,7 +1229,6 @@ if (!function_exists('debug')) {
             die($output_msg);
         };
     };
-
 
     /**
      * Write debug output to log file
@@ -1357,7 +1354,6 @@ if (!function_exists('debug')) {
 
         return '';
     }
-
 
     /**
      * Outputs help info on how to use debug()
@@ -1736,8 +1732,7 @@ if (!function_exists('debug')) {
     }
 
 
-
-    // ==================================================================
+    // ==============================================================
     // The following is for debugging the above functions.
 
     /**
@@ -1749,7 +1744,7 @@ if (!function_exists('debug')) {
      *
      * @return void
      */
-    function debugDebug($msg = '', $arr = array())
+    function debugDebug($msg = '', $arr = [])
     {
         error_reporting(E_ALL | E_STRICT);
         $output = '';
@@ -1778,8 +1773,9 @@ if (!function_exists('debug')) {
         }
     }
 
-    // ==================================================================
-    // The following is for debugging the above functions.
+    // ==============================================================
+    // The following is for debugging the above functions but
+    // outputting to a log file.
 
     /**
      * Used for debugging other functions in debug.inc.php
@@ -1790,7 +1786,7 @@ if (!function_exists('debug')) {
      *
      * @return void
      */
-    function debugLog($msg='', $arr=array())
+    function debugLog($msg = '', $arr = [])
     {
         error_reporting(E_ALL | E_STRICT);
         $output = '';
@@ -1829,7 +1825,7 @@ if (!function_exists('debug')) {
      */
     function debugParent($input)
     {
-        $parent = debug_backtrace();debug($parent);
+        $parent = debug_backtrace(); // debug($parent);
         if (isset($parent[2])) {
             $debug_line = $parent[1]['line'];
             $debug_file = $parent[1]['file'];
