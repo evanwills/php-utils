@@ -457,18 +457,23 @@ class EnhancedPDO
     }
 
     /**
-     * Prepare a PDO statement with :ID parameter, bind the supplied
+     * Prepare a PDO statement with :STR parameter, bind the supplied
      * ID value to the statement then return the statement for
      * further binding and execution
      *
-     * NOTE: When binding $str this assumes that the statement's SQL
-     *       contains an :STR parameter, however, you can override
-     *       this by passing a different string as the third parameter
+     * NOTE: By default, $str is bound to the SQL paramter ":STR".
+     *       However, this can be overriden by passing an alternative
+     *       string as the third parameter `$param`
+     *
+     * NOTE ALSO: If you pass a float as the second paramter (`$str`)
+     *       PHP *should* silently coerce the float into a string.
      *
      * @param string               $sql   SQL statement string to be
      *                                    prepared
-     * @param string               $str   String to be bound in
+     * @param string               $str   String (or float) to be
+     *                                    bound in
      * @param string               $param Parameter name to bind to
+     *                                    (if not ":STR")
      * @param PDO|EnhancedPDO|null $db    Override database
      *                                    connection object
      *
@@ -628,16 +633,22 @@ class EnhancedPDO
     }
 
     /**
-     * Take a pre-prepared PDO statement, bind a single string value
-     * to it, execute it then return the statement
+     * Take a pre-prepared PDO statement, bind a single string
+     * (or float) value to it, execute it then return the statement.
      *
-     * NOTE: When binding $str this assumes that the statement's SQL
-     *       contains a single :STR parameter (and no other params)
+     * NOTE: By default, $str is bound to the SQL paramter ":STR".
+     *       However, this can be overriden by passing an alternative
+     *       string as the third parameter `$param`
+     *
+     * NOTE ALSO: If you pass a float as the second paramter (`$str`)
+     *       PHP *should* silently coerce the float into a string.
      *
      * @param PDOStatement $stmt  PDO Statement to which parameters
      *                            are bound and executed
-     * @param string       $str   String value to be bound in
+     * @param string       $str   String (or float) value to be
+     *                            bound in.
      * @param string       $param Parameter name to bind to
+     *                            (if not "STR")
      *
      * @return PDOStatement
      * @throws Exception if there is an error with the query
@@ -709,15 +720,19 @@ class EnhancedPDO
      * $str value to the statement then execute the statement then
      * return the statement for further use
      *
-     * NOTE: When binding $str this assumes that the statement's SQL
-     *       contains an :STR parameter
+     * NOTE: By default, $str is bound to the SQL paramter ":STR".
+     *       However, this can be overriden by passing an alternative
+     *       string as the third parameter `$param`
+     *
+     * NOTE ALSO: If you pass a float as the second paramter (`$str`)
+     *       PHP *should* silently coerce the float into a string.
      *
      * @param string               $sql   SQL statement string to be
      *                                    prepared
-     * @param string               $str   String value to be bound in
-     *                                    (If Str is false bind step
-     *                                    is skipped)
+     * @param string               $str   String (or float) value to
+     *                                    be bound in.
      * @param string               $param Parameter name to bind to
+     *                                    (if not "STR")
      * @param PDO|EnhancedPDO|null $db    Override database
      *                                    connection object
      *
